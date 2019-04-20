@@ -6,15 +6,17 @@ import ReactTable from "react-table";
 import "react-table/react-table.css";
 import "./styles/ag-grid.css";
 import "./styles/ag-theme-balham.css";
-import { getRowData} from "./data";
+import { getcallRowData} from "./data";
+import { getputRowData} from "./data";
 import { updateRowData } from "./data";
-import { array } from "prop-types";
+
 
 class App extends Component {
   constructor() {
     super();
     this.state = {
-      data: getRowData(),
+      calldata: getcallRowData(),
+      putdata: getputRowData(),
       spotPriceTxt: "11.00",
       selectModelOption: "MayGard",
       interstRateTxt: "10",
@@ -44,6 +46,8 @@ class App extends Component {
         callsPrice: this.state.firstName
       })*/
 
+     
+    
     console.log("select value:" + this.state.selectModel);
 
     //call webservice
@@ -60,7 +64,7 @@ class App extends Component {
       "expireDate": "29042019"
       }]
     
-      var gridData = this.state.data;
+      var gridData = this.state.calldata;
       var optionarray = [];
       var gridobj = {
         spotPrice:"",
@@ -104,13 +108,18 @@ class App extends Component {
           console.error(error);
       });
     console.log("webservice callover...");
+
+    
     
     event.preventDefault();
   };
 
   bindToGrid = function(current, data){
-    var updateData = updateRowData(current.state.data, data);
-    current.setState(updateData);
+    var updateData = updateRowData(current.state.calldata, current.state.putdata,  data);
+    console.log("********** - updateData ", updateData);
+    this.setState({ calldata: updateData });
+   
+    console.log("********** - ", this.state.calldata);
   }
 
   renderEditable = cellInfo => {
@@ -120,12 +129,29 @@ class App extends Component {
         contentEditable
         suppressContentEditableWarning
         onBlur={e => {
-          let row = this.state.data[cellInfo.index];
+          let row = this.state.calldata[cellInfo.index];
           row[cellInfo.column.id] = e.target.innerHTML;
           //this.listPrimitive.update(cellInfo.index, row);
         }}
         dangerouslySetInnerHTML={{
-          __html: this.state.data[cellInfo.index][cellInfo.column.id]
+          __html: this.state.calldata[cellInfo.index][cellInfo.column.id]
+        }}
+      />
+    );
+  };
+  renderEditable1 = cellInfo => {
+    return (
+      <div
+        style={{ backgroundColor: "#fafafa" }}
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={e => {
+          let row = this.state.putdata[cellInfo.index];
+          row[cellInfo.column.id] = e.target.innerHTML;
+          //this.listPrimitive.update(cellInfo.index, row);
+        }}
+        dangerouslySetInnerHTML={{
+          __html: this.state.putdata[cellInfo.index][cellInfo.column.id]
         }}
       />
     );
@@ -210,7 +236,7 @@ class App extends Component {
                       style={{textAlign: "center", fontWeight:'20px', backgroundColor:'black', color: 'white',  borderColor: 'white', height: '100%'}}
                       id="callGrid"
                       name="callGrid"
-                      data={getRowData()}
+                      data={getcallRowData()}
                       columns  ={[
                         {
                           style : {border: '2px',color: 'green' },
@@ -228,19 +254,25 @@ class App extends Component {
                         {
                           style : {border: '2px',color: 'black' },
                           Header: "Delta",
-                          accessor: "callDelta",
+                          accessor: "CallDelta",
                           Cell: this.renderEditable
                         },
                         {
                           style : {border: '2px',color: 'black'},
                           Header: "Theta",
-                          accessor: "callTheta",
+                          accessor: "CallTheta",
                           Cell: this.renderEditable
                         },
                         {
-                          style : {border: '2px',color: 'white'},
+                          style : {border: '2px',color: 'black'},
                           Header: "Gamma",
-                          accessor: "callGamma",
+                          accessor: "CallGamma",
+                          Cell: this.renderEditable
+                        },
+                        {
+                          style : {border: '2px',color: 'black'},
+                          Header: "Rho",
+                          accessor: "CallRho",
                           Cell: this.renderEditable
                         }
                       ]}
@@ -251,38 +283,44 @@ class App extends Component {
                       textAlign: "center"
                     }}>
                     <ReactTable  className='ag-theme-balham'                    
-                      style={{textAlign: "center", backgroundColor:'black', color: 'white',  borderColor: 'white' , height: '100%'}}
+                      style={{textAlign: "center", fontWeight:'20px', backgroundColor:'black', color: 'white',  borderColor: 'white', height: '100%'}}
                       id="putgrid"
                       name="putGrid"
-                      data={data}
+                      data={getputRowData()}
                       columns={[
                         {
                           style : {border: '2px',color: 'green' },
                           Header: "Strike Price",
                           accessor: "StrikePrice",
-                          Cell: this.renderEditable
+                          Cell: this.renderEditable1
                         },                        
                         {
                           style : {border: '2px',color: 'green' },
                           Header: "Volatility",
                           accessor: "PutVolatility",
-                          Cell: this.renderEditable
+                          Cell: this.renderEditable1
                         },                        
                         {
-                          style : {border: '2px',color: 'white' },
+                          style : {border: '2px',color: 'black' },
                           Header: "Delta",
-                          accessor: "putDelta",
-                          Cell: this.renderEditable
+                          accessor: "PutDelta",
+                          Cell: this.renderEditable1
                         },
                         {
-                          style : {border: '2px',color: 'white', backgroundColor:'grey' },
+                          style : {border: '2px',color: 'black' },
                           Header: "Theta",
-                          accessor: "putTheta",
-                          Cell: this.renderEditable
+                          accessor: "PutTheta",
+                          Cell: this.renderEditable1
                         },
                         {
                           Header: "Gamma",
-                          accessor: "putGamma",
+                          accessor: "PutGamma",
+                          Cell: this.renderEditable1
+                        },
+                        {
+                          style : {border: '2px',color: 'black'},
+                          Header: "Rho",
+                          accessor: "PutRho",
                           Cell: this.renderEditable
                         }
                       ]}
