@@ -8,8 +8,9 @@ import "./styles/ag-grid.css";
 import "./styles/ag-theme-balham.css";
 import { getcallRowData} from "./data";
 import { getputRowData} from "./data";
-import { updateRowData } from "./data";
-
+import { updateCallRowData } from "./data";
+import { getParamaeter } from "./data";
+import { updatePutRowData } from "./data";
 
 class App extends Component {
   constructor() {
@@ -17,10 +18,10 @@ class App extends Component {
     this.state = {
       calldata: getcallRowData(),
       putdata: getputRowData(),
-      spotPriceTxt: "11.00",
+      spotPriceTxt: "11713.20",
       selectModelOption: "MayGard",
       interstRateTxt: "10",
-      selectExpDateChange: "23042019"
+      selectExpDateChange: "29042019"
     };
   }
   
@@ -41,65 +42,53 @@ class App extends Component {
   handleSubmit = event => {
     //event.preventDefault();
     console.log("good to go..");
-
-    /* this.state.data.push({
-        callsPrice: this.state.firstName
-      })*/
-
-     
     
-    console.log("select value:" + this.state.selectModel);
-
     //call webservice
     console.log("call webservice");
 
-    var url = "http://13.233.149.178:8080/cmt/workspace/calculate";
+    var url = "http://WorkshopLoadBalancer-582707833.ap-south-1.elb.amazonaws.com:8080/cmt/workspace/calculate";
 
-    var myVar = 
-    [{
-      "spotPrice": 100,
-      "strikePrice": 120,
-      "interestRate": 10,
-      "impliedVolatility": 0.1,
-      "expireDate": "29042019"
-      }]
+   /* var myVar = 
+    {
+      "model":"",
+      "spotPrice":11713.20,
+      "interestRate":10.0,
+      "requests":[
+      {
+      "strikePrice":11750,
+      "expireDate":"26042019",
+      "optionType":"CALL",
+      "impliedVolatility":13.69
+      },
+    {
+      "strikePrice":11750,
+      "expireDate":"26042019",
+      "optionType":"PUT",
+      "impliedVolatility":14.69
+      }
+      ]
+    };*/
     
-      var gridData = this.state.calldata;
-      var optionarray = [];
-      var gridobj = {
-        spotPrice:"",
-        strikePrice:"",
-        interestRate: "",
-        impliedVolatility: "",
-        expireDate: ""
-      }
+      var gridcallData = this.state.calldata;
+      var gridputlData = this.state.putdata;
+      var webparamobjcall = getParamaeter(this, gridcallData, gridputlData);
 
-      for(var key in gridData){
-        gridobj.spotPrice = this.state.spotPriceTxt;
-        gridobj.strikePrice = gridData[key].StrikePrice;
-        gridobj.interestRate = this.state.interstRateTxt;
-        gridobj.expireDate = this.state.selectExpDateChange;
-        gridobj.impliedVolatility = gridData[key].CallVolatility;
-
-        optionarray.push(gridobj);
-      }
 
       console.log("*********Service parameter**************");
-      console.log(optionarray);
+      console.log(webparamobjcall);
     
     fetch(url, 
       {
         method: "POST", 
         headers: {
-          "Content-Type": "application/Json",
-          "Access-Control-Allow-Origin": "*",         
+          "Content-Type": "application/Json",                 
         },
-        body: JSON.stringify(optionarray),
+        body: JSON.stringify(webparamobjcall),
         }).then((response) => {
           return response.json();
         })
           .then((myJson) => {
-          //console.log("json data .." +JSON.stringify(myJson));
+          console.log("webservice data .." +JSON.stringify(myJson));
           var webdata = JSON.stringify(myJson);
           this.bindToGrid(this, webdata);
           return JSON.stringify(myJson);
@@ -107,17 +96,20 @@ class App extends Component {
         .catch(error => {
           console.error(error);
       });
-    console.log("webservice callover...");
-
-    
+    console.log("webservice callover...");   
     
     event.preventDefault();
   };
 
   bindToGrid = function(current, data){
-    var updateData = updateRowData(current.state.calldata, current.state.putdata,  data);
-    console.log("********** - updateData ", updateData);
+  //  console.log("********** - webapiData ", data);
+    var updateData = updateCallRowData(current.state.calldata,  data);
+    var len = current.state.calldata.length;
+    var updatePutData = updatePutRowData(current.state.putdata, len ,data);
+   
+   
     this.setState({ calldata: updateData });
+    this.setState({ putdata: updatePutData  });
    
     console.log("********** - ", this.state.calldata);
   }
@@ -157,10 +149,8 @@ class App extends Component {
     );
   };
   render() {
-    const { data } = this.state;
     return (
-      <div>
-        <p>
+      <div>     
           <form 
            style={{
             width: "100%",
@@ -180,9 +170,8 @@ class App extends Component {
               <label>
                 Select Model:
                 <select name="SelectModel" value= {this.state.selectModelOption} onChange={this.selecthandleChange}  style={{color: "green"}}>
-                  <option />
-                  <option>Black Scholes</option>
                   <option>Maygard</option>
+                  <option>JQuant</option>                  
                 </select>
               </label>{" "}
               <label>
@@ -214,12 +203,18 @@ class App extends Component {
               <label>
                 Expires:
                 <select name="SelectExpDateChange" value= {this.state.selectExpDateChange} onChange={this.selecthandleChange}  style={{color: "green"}}>
-                  <option>21042019</option>
-                  <option>28042019</option>
+                  <option>29042019</option>
+                  <option>03052019</option>
+                  <option>07052019</option>
                 </select>
               </label>{" "}          
               <input type="submit" value="Calculate" />
-              <table boader='2' style={{ width:"100%"}} >
+         
+        </div>
+        </form>
+        
+        <div>
+              <table boader='2' style={{ width:"80%"}} >
                 <tbody >
                 <tr>
                   <td style={{textAlign: "center", backgroundColor:'orange', color: 'green'}}>CALL OPTION</td>
@@ -229,99 +224,115 @@ class App extends Component {
                   <td
                     style={{
                       height: "150px",
-                      textAlign: "center"
+                      textAlign: "center",
+                      width: "50%"
                     }}
                   >
-                    <ReactTable className='ag-theme-balham'
-                      style={{textAlign: "center", fontWeight:'20px', backgroundColor:'black', color: 'white',  borderColor: 'white', height: '100%'}}
+                    <ReactTable 
+                      style={{textAlign: "center", color:'red', fontWeight:'bold',backgroundColor:'black', fontSize:'13px',  borderColor: 'white' }}
                       id="callGrid"
                       name="callGrid"
                       data={getcallRowData()}
                       columns  ={[
                         {
-                          style : {border: '2px',color: 'green' },
+                          style : {color: 'black'},
                           Header: "Strike Price",
                           accessor: "StrikePrice",
                           Cell: this.renderEditable
                           
                         },
                         {
-                          style : {border: '2px',color: 'green' },
+                          style : {color: 'black' },
                           Header: "Volatility",
                           accessor: "CallVolatility",
                           Cell: this.renderEditable
                         },
                         {
-                          style : {border: '2px',color: 'black' },
+                          style : {color: 'green' },
                           Header: "Delta",
                           accessor: "CallDelta",
                           Cell: this.renderEditable
                         },
                         {
-                          style : {border: '2px',color: 'black'},
+                          style : {color: 'green'},
                           Header: "Theta",
                           accessor: "CallTheta",
                           Cell: this.renderEditable
                         },
                         {
-                          style : {border: '2px',color: 'black'},
+                          style : {color: 'green'},
                           Header: "Gamma",
                           accessor: "CallGamma",
                           Cell: this.renderEditable
                         },
                         {
-                          style : {border: '2px',color: 'black'},
+                          style : {color: 'green'},
+                          Header: "Vega",
+                          accessor: "CallVega",
+                          Cell: this.renderEditable
+                        },
+                        {
+                          style : {color: 'green'},
                           Header: "Rho",
                           accessor: "CallRho",
                           Cell: this.renderEditable
                         }
+                       
                       ]}
                     />
                   </td>
                   <td  style={{
                       height: "150px",
-                      textAlign: "center"
+                      textAlign: "center",
+                      width: "50%"
                     }}>
-                    <ReactTable  className='ag-theme-balham'                    
-                      style={{textAlign: "center", fontWeight:'20px', backgroundColor:'black', color: 'white',  borderColor: 'white', height: '100%'}}
+                    <ReactTable                     
+                     style={{textAlign: "center", color:'red', fontWeight:'bold',backgroundColor:'black', fontSize:'13px',  borderColor: 'white' }}
                       id="putgrid"
                       name="putGrid"
                       data={getputRowData()}
                       columns={[
                         {
-                          style : {border: '2px',color: 'green' },
+                          style : {color: 'black' },
                           Header: "Strike Price",
                           accessor: "StrikePrice",
                           Cell: this.renderEditable1
                         },                        
                         {
-                          style : {border: '2px',color: 'green' },
+                          style : {color: 'black' },
                           Header: "Volatility",
                           accessor: "PutVolatility",
                           Cell: this.renderEditable1
                         },                        
                         {
-                          style : {border: '2px',color: 'black' },
+                          style : {color: 'green' },
                           Header: "Delta",
                           accessor: "PutDelta",
                           Cell: this.renderEditable1
                         },
                         {
-                          style : {border: '2px',color: 'black' },
+                          style : {color: 'green'},
                           Header: "Theta",
                           accessor: "PutTheta",
                           Cell: this.renderEditable1
                         },
                         {
+                          style : {color: 'green'},
                           Header: "Gamma",
                           accessor: "PutGamma",
                           Cell: this.renderEditable1
                         },
                         {
-                          style : {border: '2px',color: 'black'},
+                          style : {color: 'green'},
+                          Header: "Vega",
+                          accessor: "PutVega",
+                          Cell: this.renderEditable1
+                        },
+                        {
+                          style : {color: 'green'},
                           Header: "Rho",
                           accessor: "PutRho",
-                          Cell: this.renderEditable
+                          Cell: this.renderEditable1
                         }
                       ]}
                     />
@@ -329,10 +340,8 @@ class App extends Component {
                   </td>
                 </tr>
                 </tbody>
-              </table>
-            </div>
-          </form>
-        </p>
+              </table>    
+              </div>                 
       </div>
     );
   }
